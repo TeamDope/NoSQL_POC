@@ -50,12 +50,13 @@ if load_checkin_data_decision == "N":
             }
             client.record_create(22, checkin)
 
-load_checkin_data_decision = input(
+load_review_data_decision = input(
     "Have you loaded the Yelp review data yet? *WARNING: MAY TAKE SEVERAL MINUTES * (Y/N).\n N: They will be loaded for you \n Y: Already loaded ")
-with open('yelp_data/review.json', 'r') as f:
-    for line in tqdm(f):
-        data = json.loads(line)
-        review = {
-            '@yelp_reviews': data
-        }
-        client.record_create(23, review)
+if (load_review_data_decision == "N"):
+    with open('yelp_data/review.json', 'r') as f:
+        for line in tqdm(f):
+            data = json.loads(line)
+            review = {
+                '@yelp_reviews': data
+            }
+            client.record_create(23, review)
