@@ -1,62 +1,150 @@
-import pyorient
+from pyorient_custom import pyorient
+from datetime import datetime
 import ijson
 import json
+import csv
 from tqdm import tqdm
 
-# set up connection to orient
-client = pyorient.OrientDB("127.0.0.1", 2424)
-session_id = client.connect("root", "root")
 
-# open dope database
-client.db_open("dope", "root", "root")
+class OrientDataLoader():
+    def __init__(self):
+        self.client = None
+        self.session_id = None
+        self.zip_income = {}
 
+    def establish_connection(self, host, port, user, password):
+        try:
+            # attempt toset up connection to orient
+            client = pyorient.OrientDB(host, port)
+            session_id = client.connect(user, password)
+            self.client = client
+            self.session_id = session_id
 
-# create new clusters for each class
+        except:
+            print("Cannot establish connection to database. Aborting...")
+            exit()
 
-create_cluster_decision = input(
-    "Have you created the Yelp clusters yet? (Y/N).\n N: They will be created for you \n Y: Already created ")
-if create_cluster_decision == "N":
-    yelp_businesses = client.data_cluster_add(
-        'yelp_business', pyorient.CLUSTER_TYPE_PHYSICAL
-    )
-    yelp_checkins = client.data_cluster_add(
-        'yelp_checkin', pyorient.CLUSTER_TYPE_PHYSICAL
-    )
-    yelp_reviews = client.data_cluster_add(
-        'yelp_review', pyorient.CLUSTER_TYPE_PHYSICAL
-    )
+        print("Database connected!")
 
-load_business_data_decision = input(
-    "Have you loaded the Yelp business data yet? (Y/N).\n N: They will be loaded for you \n Y: Already loaded ")
-if load_business_data_decision == "N":
-    with open('yelp_data/business.json', 'r') as f:
-        for line in tqdm(f):
-            data = json.loads(line)
-            business = {
-                '@yelp_businesses': data
-            }
-            client.record_create(21, business)
+    def connect_db(self, db, user, password):
+        try:
+            # open dope database
+            self.client.db_open(db, user, password)
+        except:
+            print("Cannot connect to database '" + db + "'. Aborting....")
+            exit()
 
-load_checkin_data_decision = input(
-    "Have you loaded the Yelp checkin data yet? (Y/N).\n N: They will be loaded for you \n Y: Already loaded ")
-if load_checkin_data_decision == "N":
-    with open('yelp_data/checkin.json', 'r') as f:
-        for line in tqdm(f):
-            print(line)
-            data = json.loads(line)
-            print(data)
-            checkin = {
-                '@yelp_checkins': data
-            }
-            client.record_create(22, checkin)
+    def create_cluster(self):
+        try:
+            self.client.data_cluster_add(
+                'yelp_business', pyorient.CLUSTER_TYPE_PHYSICAL
+            )
+            print("Created yelp_business cluster!")
+        except:
+            print("Business cluster already created")
 
-load_review_data_decision = input(
-    "Have you loaded the Yelp review data yet? *WARNING: MAY TAKE SEVERAL MINUTES * (Y/N).\n N: They will be loaded for you \n Y: Already loaded ")
-if (load_review_data_decision == "N"):
-    with open('yelp_data/review.json', 'r') as f:
-        for line in tqdm(f):
-            data = json.loads(line)
-            review = {
-                '@yelp_reviews': data
-            }
-            client.record_create(23, review)
+        try:
+            self.client.data_cluster_add(
+                'yelp_checkin', pyorient.CLUSTER_TYPE_PHYSICAL
+            )
+            print("Created yelp_checkin cluster!")
+        except:
+            print("Checkin cluster already created")
+
+        try:
+            self.client.data_cluster_add(
+                'yelp_review', pyorient.CLUSTER_TYPE_PHYSICAL
+            )
+            print("Created yelp_review cluster")
+        except:
+            print("Review cluster already created")
+
+        try:
+            self.client.data_cluster_add(
+                'yelp_business_income', pyorient.CLUSTER_TYPE_PHYSICAL
+            )
+            print("Created yelp_business_income cluster!")
+        except:
+            print("Business/income denormalized cluster already created")
+
+    # create an efficient hash table to store zipcodes and average incomes
+
+    def income_zip_hash(self):
+        print("Hashing income/zipcode data...\n")
+        with open('zip_code_data/2013-zipcode-income.csv') as f:
+            reader = csv.DictReader(f)
+            for row in tqdm(reader):
+                zc = row['zipcode']
+                income = float(row['avg'])
+                self.zip_income[zc] = income
+
+    # load data into orientdb database
+    def load_data(self):
+
+        # business data
+        load_business_data_decision = input(
+            "Do you want to load/reload the Yelp Business Data? (Y/N): ")
+        if load_business_data_decision == "Y":
+            with open('yelp_data/business.json', 'r') as f:
+                for line in tqdm(f):
+                    data = json.loads(line)
+                    data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
+                    business = {
+                        '@yelp_businesses': data
+                    }
+                    self.client.record_create(21, business)
+
+        # checkin data
+        load_checkin_data_decision = input(
+            "Do you want to load/reload the Yelp Checkin Data? (Y/N): ")
+        if load_checkin_data_decision == "Y":
+            with open('yelp_data/checkin.json', 'r') as f:
+                for line in tqdm(f):
+                    data = json.loads(line)
+                    data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
+                    checkin = {
+                        '@yelp_checkins': data
+                    }
+                    self.client.record_create(22, checkin)
+
+        # review data (HEAVY)
+        load_review_data_decision = input(
+            "Do you want to load/reload the Yelp Review Data? (Y/N): ")
+        if (load_review_data_decision == "Y"):
+            with open('yelp_data/review.json', 'r') as f:
+                for line in tqdm(f):
+                    data = json.loads(line)
+                    data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
+                    review = {
+                        '@yelp_reviews': data
+                    }
+                    self.client.record_create(23, review)
+
+        # denormalized business data (HEAVY)
+        load_denormalized_business_data_decision = input(
+            "Do you want to load the denormalized Yelp Review data? (Y/N): "
+        )
+        if (load_denormalized_business_data_decision == "Y"):
+            self.income_zip_hash()  # load zip code income data
+            with open('yelp_data/business.json', 'r') as f1:
+                print("Denormalizing data...")
+                for line in tqdm(f1):
+                    data = json.loads(line)
+                    if data['postal_code'] not in self.zip_income:
+                        pass  # don't add business if income isn't associated with area
+                    else:
+                        # add income field to business (no need for JOIN)
+                        data['average_zip_income'] = self.zip_income[data['postal_code']]
+                        data['loaded_at'] = datetime.utcnow # current time of loaded data (provenance)
+                        business = {
+                            '@yelp_business_income': data
+                        }
+                        self.client.record_create(24, business)
+
+        print("Finished loading data.")
+
+loader = OrientDataLoader()
+loader.establish_connection("127.0.0.1", 2424, "root", "root")
+loader.connect_db("dope", "root", "root")
+loader.create_cluster()
+loader.load_data()
