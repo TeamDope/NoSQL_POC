@@ -1,5 +1,5 @@
 from selenium import webdriver
-import wget
+import requests, tarfile
 
 URL = "https://www.yelp.com/dataset/download"
 DATA_NAME = "yelp_data"
@@ -34,6 +34,18 @@ data_form.submit()
 
 json_link = driver.find_element_by_partial_link_text(JSON_LINK_TEXT)
 json_url = json_link.get_attribute("href")
-wget.download(json_url)
-
 driver.quit()
+
+req = requests.get(json_url, stream=True)
+print("Downloading ...", end=" ")
+fname = json_url.split('/')[-1].split('?')[0]
+with open(fname, 'wb') as handle:
+    for chunk in req.iter_content(chunk_size=512):
+        if chunk:
+            handle.write(chunk)
+print("Complete")
+
+Print("Untarring")
+f = tarfile.open(fname)
+dir = fname.split('.')[0]
+f.extractall(path=dir)

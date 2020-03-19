@@ -19,20 +19,20 @@ class OrientDataLoader():
             session_id = client.connect(user, password)
             self.client = client
             self.session_id = session_id
-
-        except:
+        except Exception as e:
             print("Cannot establish connection to database. Aborting...")
+            print(e)
+            print("Make sure to run the orient database with port 2424 open.")
             exit()
 
         print("Database connected!")
 
     def connect_db(self, db, user, password):
-        try:
-            # open dope database
-            self.client.db_open(db, user, password)
-        except:
-            print("Cannot connect to database '" + db + "'. Aborting....")
-            exit()
+        if not self.client.db_exists(db):
+            print("Createing databse {}".format(db))
+            self.client.db_create(db)
+        print("Opening database {}".format(db))
+        self.client.db_open(db, user, password)
 
     def create_cluster(self):
         try:
@@ -80,38 +80,37 @@ class OrientDataLoader():
 
     # load data into orientdb database
     def load_data(self):
-
         # business data
         load_business_data_decision = input(
-            "Do you want to load/reload the Yelp Business Data? (Y/N): ")
+            "Do you want to load/reload the Yelp Business Data? (Y/N): ").upper()
         if load_business_data_decision == "Y":
-            with open('yelp_data/business.json', 'r') as f:
+            with open('yelp_dataset/business.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
                     business = {
                         '@yelp_businesses': data
                     }
-                    self.client.record_create(21, business)
+                    self.client.record_create(17, business)
 
         # checkin data
         load_checkin_data_decision = input(
-            "Do you want to load/reload the Yelp Checkin Data? (Y/N): ")
+            "Do you want to load/reload the Yelp Checkin Data? (Y/N): ").upper()
         if load_checkin_data_decision == "Y":
-            with open('yelp_data/checkin.json', 'r') as f:
+            with open('yelp_dataset/checkin.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
                     checkin = {
                         '@yelp_checkins': data
                     }
-                    self.client.record_create(22, checkin)
+                    self.client.record_create(18, checkin)
 
         # review data (HEAVY)
         load_review_data_decision = input(
-            "Do you want to load/reload the Yelp Review Data? (Y/N): ")
+            "Do you want to load/reload the Yelp Review Data? (Y/N): ").upper()
         if (load_review_data_decision == "Y"):
-            with open('yelp_data/review.json', 'r') as f:
+            with open('yelp_dataset/review.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
@@ -123,10 +122,10 @@ class OrientDataLoader():
         # denormalized business data (HEAVY)
         load_denormalized_business_data_decision = input(
             "Do you want to load the denormalized Yelp Review data? (Y/N): "
-        )
+        ).upper()
         if (load_denormalized_business_data_decision == "Y"):
             self.income_zip_hash()  # load zip code income data
-            with open('yelp_data/business.json', 'r') as f1:
+            with open('yelp_dataset/business.json', 'r') as f1:
                 print("Denormalizing data...")
                 for line in tqdm(f1):
                     data = json.loads(line)
