@@ -3,6 +3,7 @@ import requests, tarfile
 
 URL = "https://www.yelp.com/dataset/download"
 DATA_NAME = "yelp_data"
+DATA_LOCATION = "/app/data/"
 JSON_LINK_TEXT = "Download JSON"
 FORM_ID = "dataset_form"
 FORM_VALUES = {
@@ -37,15 +38,15 @@ json_url = json_link.get_attribute("href")
 driver.quit()
 
 req = requests.get(json_url, stream=True)
-print("Downloading ...", end=" ")
-fname = json_url.split('/')[-1].split('?')[0]
+print("Downloading ...")
+fname = DATA_LOCATION + json_url.split('/')[-1].split('?')[0]
 with open(fname, 'wb') as handle:
     for chunk in req.iter_content(chunk_size=512):
         if chunk:
             handle.write(chunk)
 print("Complete")
 
-Print("Untarring")
+print("Untarring")
 f = tarfile.open(fname)
 dir = fname.split('.')[0]
 f.extractall(path=dir)

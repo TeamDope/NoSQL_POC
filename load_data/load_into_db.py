@@ -11,6 +11,7 @@ class OrientDataLoader():
         self.client = None
         self.session_id = None
         self.zip_income = {}
+        self.data_location = "/app/data/"
 
     def establish_connection(self, host, port, user, password):
         try:
@@ -71,7 +72,7 @@ class OrientDataLoader():
 
     def income_zip_hash(self):
         print("Hashing income/zipcode data...\n")
-        with open('zip_code_data/2013-zipcode-income.csv') as f:
+        with open(self.data_location + 'zip_code_data/2013-zipcode-income.csv') as f:
             reader = csv.DictReader(f)
             for row in tqdm(reader):
                 zc = row['zipcode']
@@ -84,7 +85,7 @@ class OrientDataLoader():
         load_business_data_decision = input(
             "Do you want to load/reload the Yelp Business Data? (Y/N): ").upper()
         if load_business_data_decision == "Y":
-            with open('yelp_dataset/business.json', 'r') as f:
+            with open(self.data_location + 'yelp_dataset/yelp_academic_dataset_business.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
@@ -97,7 +98,7 @@ class OrientDataLoader():
         load_checkin_data_decision = input(
             "Do you want to load/reload the Yelp Checkin Data? (Y/N): ").upper()
         if load_checkin_data_decision == "Y":
-            with open('yelp_dataset/checkin.json', 'r') as f:
+            with open(self.data_location + 'yelp_dataset/yelp_academic_dataset_checkin.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
@@ -110,7 +111,7 @@ class OrientDataLoader():
         load_review_data_decision = input(
             "Do you want to load/reload the Yelp Review Data? (Y/N): ").upper()
         if (load_review_data_decision == "Y"):
-            with open('yelp_dataset/review.json', 'r') as f:
+            with open(self.data_location + 'yelp_dataset/yelp_academic_dataset_review.json', 'r') as f:
                 for line in tqdm(f):
                     data = json.loads(line)
                     data['loaded_at'] = datetime.utcnow().strftime("%Y%m%d") # current time of loaded data (provenance)
@@ -125,7 +126,7 @@ class OrientDataLoader():
         ).upper()
         if (load_denormalized_business_data_decision == "Y"):
             self.income_zip_hash()  # load zip code income data
-            with open('yelp_dataset/business.json', 'r') as f1:
+            with open(self.data_location + 'yelp_dataset/yelp_academic_dataset_business.json', 'r') as f1:
                 print("Denormalizing data...")
                 for line in tqdm(f1):
                     data = json.loads(line)
